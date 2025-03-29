@@ -2,13 +2,9 @@ from knowledge_gap import KnowledgeGapDetector
 
 detector = KnowledgeGapDetector()
 
-# Example query and expected response
-query = "What is Reinforcement Learning?"
-response = "It is a machine learning technique."
-expected_keywords = ["reward", "policy", "agent", "environment"]
+query = "What is machine learning?"
+response = "Machine learning is a subset of AI."
+expected_keywords = ["algorithm", "data", "training", "model", "supervised", "unsupervised"]
 
-# Check for knowledge gaps
-gap = detector.detect_gap(query, response, expected_keywords)
-
-# Print the results
-print("Detected Knowledge Gaps:", gap)
+missing_keywords = detector.detect_gap(query, response, expected_keywords)
+print("Missing Keywords:", missing_keywords)

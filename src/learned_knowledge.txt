@@ -46,3 +46,18 @@
     "a": "A, or a, is the first letter and the first vowel letter of the Latin alphabet, used in the modern English alphabet, and others worldwide. Its name in English is a (pronounced   AY), plural aes.\nIt is similar in shape to the Ancient Greek letter alpha, from which it derives. The uppercase version consists of the two slanting sides of a triangle, crossed in the middle by a horizontal bar. The lowercase version is often written in one of two forms: the double-storey |a| and single-storey |\u0251|. The latter is commonly used in handwriting and fonts based on it, especially fonts intended to be read by children, and is also found in italic type.\nIn English, a is the indefinite article, with the\nalternative form an.",
     "u": "U, or u, is the twenty-first letter and the fifth vowel letter of the Latin alphabet, used in the modern English alphabet and the alphabets of other western European languages and others worldwide. Its name in English is u (pronounced  ), plural ues."
 }
+{
+    "What are the latest advancements in AI?": "No Wikipedia results found."
+}
+{
+    "What are the latest advancements in AI?": "No Wikipedia results found."
+}
+{
+    "What are the latest advancements in AI?": "No Wikipedia results found."
+}
+{
+    "What are the latest advancements in AI?": "No Wikipedia results found."
+}
+{
+    "What are the latest advancements in AI?": "No Wikipedia results found."
+}
