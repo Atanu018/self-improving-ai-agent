@@ -19,31 +19,28 @@ class LearningLoop:
 
         self.missing_keywords_tracker = defaultdict(int)  
         self.feedback_log = self.load_feedback_log()  
-        self.knowledge_cache = {}  
-        self.failed_queries = set()  
-        self.batch_feedback_updates = {}  
-        self.past_gaps = self.load_past_gaps()  # ✅ Load past gaps once at startup
+        self.knowledge_cache = {}  # ✅ Cache for retrieved knowledge
+        self.failed_queries = set()  # ✅ Track failed queries to avoid retrying immediately
+        self.batch_feedback_updates = {}  # ✅ Store feedback in memory for batch writing
 
     def generate_new_query(self):
         """Generate a query based on past failures and knowledge gaps."""
+        # ✅ Prioritize past failures first
         if self.failed_queries:
-            query = self.failed_queries.pop()  
-            logging.info(f"🛑 Retrying Failed Query: {query}")
+            query = self.failed_queries.pop()  # Remove it from failed queries
             return query  
 
-        if self.past_gaps:
-            query = max(self.past_gaps, key=self.past_gaps.get)
-            logging.info(f"🔄 Using past gap query: {query}")
-            return query  
+        past_gaps = self.load_past_gaps()
+        if past_gaps:
+            return max(past_gaps, key=past_gaps.get)  # Most frequent gap
 
-        query = "What are the latest advancements in AI?"  
-        logging.info(f"📌 Default Query Used: {query}")
-        return query  
+        return "What are the latest advancements in AI?"  # Default query
 
     def extract_expected_keywords(self, query):
         """Retrieve knowledge and extract keywords dynamically."""
         retrieved_info = self.knowledge_retriever.retrieve_knowledge(query)
-        return self.extract_keywords_from_text(retrieved_info)
+        keywords = self.extract_keywords_from_text(retrieved_info)
+        return keywords
 
     def extract_keywords_from_text(self, text):
         """Extract keywords from text using KeyBERT."""
@@ -52,6 +49,7 @@ class LearningLoop:
 
     def refine_query(self, query):
         """Modify the query dynamically if initial retrieval is weak."""
+        logging.info(f"🔄 Refining Query: {query}")
         refined_queries = [
             f"Comprehensive guide on {query}",
             f"Detailed explanation of {query}",
@@ -62,6 +60,7 @@ class LearningLoop:
 
     def retrieve_and_refine_knowledge(self, query, expected_keywords):
         """Retrieve knowledge with caching and refine query if needed."""
+        # ✅ Check cache first
         if query in self.knowledge_cache:
             logging.info(f"⚡ Using cached knowledge for: {query}")
             return self.knowledge_cache[query]
@@ -76,18 +75,20 @@ class LearningLoop:
             logging.warning(f"⚠️ Weak retrieval. Refining query to: {refined_query}")
             retrieved_info = self.knowledge_retriever.retrieve_knowledge(refined_query)
 
+        # ✅ Store in cache
         self.knowledge_cache[query] = retrieved_info
         return retrieved_info
 
     def store_feedback(self, query, was_successful):
         """Store feedback on whether a query was effective."""
-        self.batch_feedback_updates[query] = was_successful  
+        self.batch_feedback_updates[query] = was_successful  # ✅ Store feedback in memory
 
+        # ✅ Batch write feedback to reduce file I/O
         if len(self.batch_feedback_updates) >= self.batch_update_interval:
             with open("feedback_log.json", "w") as file:
                 json.dump(self.batch_feedback_updates, file, indent=4)
             logging.info("✅ Batch feedback saved.")
-            self.batch_feedback_updates.clear()  
+            self.batch_feedback_updates.clear()  # ✅ Clear after writing
 
     def load_feedback_log(self):
         """Load feedback data from a file."""
@@ -108,6 +109,7 @@ class LearningLoop:
 
             retrieved_info = self.retrieve_and_refine_knowledge(query, expected_keywords)
 
+            # Identify gaps using the combined approach
             gap_result = self.knowledge_gap_identifier.detect_combined_gap(query, retrieved_info, expected_keywords)
 
             missing_keywords = gap_result["missing_keywords"]
@@ -116,6 +118,7 @@ class LearningLoop:
             if missing_keywords:
                 logging.warning(f"⚠️ Knowledge Gaps Detected: {missing_keywords}")
 
+                # Update frequency of missing keywords
                 for keyword in missing_keywords:
                     self.missing_keywords_tracker[keyword] += 1  
 
@@ -126,22 +129,23 @@ class LearningLoop:
                 
                 logging.info(f"📚 Learning new concepts: {new_knowledge}")
                 self.store_new_knowledge(new_knowledge)  
-                self.store_feedback(query, False)  
-                self.failed_queries.add(query)  
+                self.store_feedback(query, False)  # Mark query as unsuccessful
+                self.failed_queries.add(query)  # ✅ Add to failed queries for retrying later
             
             elif semantic_gap:
                 logging.warning("🔄 Semantic Gap Detected: AI needs better contextual understanding.")
                 additional_knowledge = self.knowledge_retriever.retrieve_knowledge("Deep explanation of " + query)
                 logging.info(f"📘 Learning advanced context: {additional_knowledge}")
                 self.store_new_knowledge(additional_knowledge)
-                self.store_feedback(query, False)  
+                self.store_feedback(query, False)  # Mark query as unsuccessful
             
             else:
                 logging.info("✅ No gaps detected. AI knowledge is up-to-date.")
-                self.store_feedback(query, True)  
+                self.store_feedback(query, True)  # Mark query as successful
 
             iteration += 1
 
+            # ✅ Save feedback every batch interval
             if iteration % self.batch_update_interval == 0:
                 with open("feedback_log.json", "w") as file:
                     json.dump(self.feedback_log, file, indent=4)
@@ -161,5 +165,4 @@ class LearningLoop:
                 gaps = file.read().splitlines()
                 return {gap: gaps.count(gap) for gap in gaps}  
         except FileNotFoundError:
-            logging.warning("⚠️ past_gaps.txt not found. Starting fresh.")
-            return {}  # ✅ Now it won’t cause issues
+            return {}
