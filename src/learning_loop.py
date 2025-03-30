@@ -27,6 +27,8 @@ class LearningLoop:
         """Generate a query based on past failures and knowledge gaps."""
         if self.failed_queries:
             query = self.failed_queries.pop()  
+            self.failed_queries.add(query)  # Keep it in the queue until successfully learned
+            logging.info(f"🔄 Retrying failed query: {query}")
             return query  
 
         past_gaps = self.load_past_gaps()
@@ -36,23 +38,34 @@ class LearningLoop:
         logging.info("📌 Default Query Used: What are the latest advancements in AI?")
         return "What are the latest advancements in AI?"
 
+
     def extract_expected_keywords(self, query):
         """
         Extracts key topics from the query.
         """
-        retrieved_info = self.knowledge_retriever.search_wikipedia(query)  # Get summary from Wikipedia
-    
+        retrieved_info = self.knowledge_retriever.search_wikipedia(query)
+        
         if not retrieved_info or retrieved_info == "No Wikipedia results found.":
             logging.warning(f"⚠️ No useful Wikipedia data for: {query}")
-            return ["Artificial Intelligence", "Machine Learning", "Deep Learning", "AI Trends"]  # Use fallback keywords
+    
+            # Fix: Use past failed queries for better keyword generation
+            if self.failed_queries:
+                alternative_query = random.choice(list(self.failed_queries))
+                logging.info(f"🔄 Trying alternative query: {alternative_query}")
+                retrieved_info = self.knowledge_retriever.search_wikipedia(alternative_query)
+    
+            if not retrieved_info or retrieved_info == "No Wikipedia results found.":
+                logging.warning("⚠️ No useful data found even after alternative query.")
+                return ["Artificial Intelligence", "Machine Learning", "Deep Learning", "AI Trends"]
     
         extracted_keywords = self.extract_keywords_from_text(retrieved_info)
-    
+        
         if not extracted_keywords:
             logging.warning("⚠️ No keywords extracted. Using default AI-related topics.")
             return ["Artificial Intelligence", "Machine Learning", "Deep Learning", "AI Trends"]
-    
+        
         return extracted_keywords
+    
     
 
     def extract_keywords_from_text(self, text):
@@ -91,18 +104,29 @@ class LearningLoop:
 
         logging.info(f"📌 Searching for: {query}")  
         retrieved_info = self.knowledge_retriever.retrieve_knowledge(query)
-
         retrieved_keywords = self.extract_keywords_from_text(retrieved_info)
 
         missing_keywords = [kw for kw in expected_keywords if kw not in retrieved_keywords]
 
         if len(missing_keywords) > 2:
-            refined_query = self.refine_query(query)
+            refined_query = f"Comprehensive guide on {' '.join(missing_keywords)}"
             logging.warning(f"⚠️ Weak retrieval. Refining query to: {refined_query}")
-            retrieved_info = self.knowledge_retriever.retrieve_knowledge(refined_query)
+
+            # Fix: Try refinement once more if the first one fails
+            refined_info = self.knowledge_retriever.retrieve_knowledge(refined_query)
+            refined_keywords = self.extract_keywords_from_text(refined_info)
+
+            if len([kw for kw in expected_keywords if kw not in refined_keywords]) > 2:
+                refined_query = f"Detailed explanation of {' '.join(missing_keywords)}"
+                logging.warning(f"⚠️ Second refinement needed: {refined_query}")
+                refined_info = self.knowledge_retriever.retrieve_knowledge(refined_query)
+
+            self.knowledge_cache[query] = refined_info
+            return refined_info
 
         self.knowledge_cache[query] = retrieved_info
         return retrieved_info
+
 
     def store_feedback(self, query, was_successful):
         """Store feedback on whether a query was effective."""

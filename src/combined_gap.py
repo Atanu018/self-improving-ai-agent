@@ -14,14 +14,20 @@ class CombinedGapDetector:
 
     def detect_combined_gap(self, query, response, expected_keywords):
         lexical_result = self.lexical_detector.detect_gap(query, response, expected_keywords)
-        semantic_result = self.semantic_detector.detect_gap(query, response)
+        semantic_result = self.semantic_detector.detect_gap(query, response)    
 
-        missing_keywords = lexical_result if isinstance(lexical_result, list) else []
+        # Ensure missing_keywords is a list
+        missing_keywords = lexical_result if isinstance(lexical_result, list) else []   
+
         lexical_gap = len(missing_keywords) >= self.lexical_threshold  
-        semantic_gap = semantic_result.get("gap_detected", False)  
+        semantic_gap = semantic_result.get("gap_detected", False)   
 
         final_gap_score = (self.weight_lexical * lexical_gap) + (self.weight_semantic * semantic_gap)
-        final_gap_detected = final_gap_score > 0.5  
+        final_gap_detected = final_gap_score > 0.5      
+
+        # Fix: Ensure at least one form of gap detection is triggered
+        if semantic_gap and not missing_keywords:
+            missing_keywords = ["contextual understanding", "explanation needed"]   
 
         result = {
             "final_gap_detected": final_gap_detected,
@@ -30,10 +36,11 @@ class CombinedGapDetector:
             "semantic_score": semantic_result.get("similarity_score", 0.0),
             "missing_keywords": missing_keywords,
             "reason": "Combined lexical & semantic gap detection",
-        }
+        }   
 
         logging.info(f"Query: {query}")
         logging.info(f"Final Gap Detected: {final_gap_detected} | Lexical Gap: {lexical_gap} | Semantic Gap: {semantic_gap}")
         logging.info(f"Missing Keywords: {missing_keywords} | Similarity Score: {result['semantic_score']:.4f}")
         
-        return result
+        return result   
+
