@@ -1,9 +1,0 @@
-{
-    "AI Ethics": "AI Ethics is the study of moral issues in AI.",
-    "Reinforcement Learning": "A machine learning paradigm focused on training agents through rewards and punishments.",
-    "Generative AI": "AI models that create new data samples, such as images, text, or music, based on patterns learned from training data.",
-    "Explainable AI": "A field of AI that focuses on making AI decision-making processes more transparent and interpretable.",
-    "Transfer Learning": "A technique where a pre-trained model is adapted to a new but related task, reducing training time and data requirements.",
-    "Quantum Computing": "A field of computing focused on quantum-mechanical phenomena such as superposition and entanglement.",
-    "Neural Networks": "A series of algorithms that attempt to recognize underlying relationships in data through a process that mimics the human brain."
-}
