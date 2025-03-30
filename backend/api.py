@@ -1,10 +1,8 @@
 from flask import Flask, request, jsonify
-from search_engine import google_search, wikipedia_search
-from adaptive_learning import AdaptiveLearning
+from adaptive_learning import google_search, wikipedia_search
 import config
 
 app = Flask(__name__)
-adaptive_model = AdaptiveLearning()
 
 @app.route("/search", methods=["POST"])
 def search():
@@ -19,10 +17,10 @@ def search():
     google_results = google_search(query)
     wikipedia_results = wikipedia_search(query)
 
-    # Improve with adaptive learning
-    refined_results = adaptive_model.enhance_results(query, google_results + wikipedia_results)
+    # Combine and return results
+    combined_results = {"google_results": google_results, "wikipedia_results": wikipedia_results}
 
-    return jsonify({"query": query, "results": refined_results})
+    return jsonify({"query": query, "results": combined_results})
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=config.PORT, debug=True)

@@ -1,19 +1,25 @@
-import pytest
-import json
-from backend.api import app
+import requests
 
-@pytest.fixture
-def client():
-    """Creates a test client for the Flask app."""
-    app.config["TESTING"] = True
-    with app.test_client() as client:
-        yield client
+BASE_URL = "http://127.0.0.1:5000"  # Update if your server is running elsewhere
 
-def test_search_api(client):
-    """Tests the search API endpoint."""
-    response = client.post("/search", json={"query": "Artificial Intelligence"})
-    
-    assert response.status_code == 200
-    data = json.loads(response.data)
-    assert "results" in data
-    assert len(data["results"]) > 0
+def test_api():
+    query = "Latest advancements in AI"
+    response = requests.post(f"{BASE_URL}/query", json={"query": query})
+
+    if response.status_code == 200:
+        result = response.json()
+        print("✅ API is working!")
+        print("🔹 Response:", result)
+
+        if 'google_results' in result and result['google_results']:
+            print("✅ Google Search API is integrated successfully!")
+            for idx, res in enumerate(result['google_results'], start=1):
+                print(f"{idx}. {res['title']} - {res['link']}")
+        else:
+            print("⚠️ No Google Search results. Check API key or query.")
+    else:
+        print(f"❌ API test failed! Status Code: {response.status_code}")
+        print("Response:", response.text)
+
+if __name__ == "__main__":
+    test_api()

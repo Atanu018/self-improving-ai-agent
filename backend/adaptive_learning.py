@@ -1,3 +1,9 @@
+import sys
+import os
+
+# Ensure root directory is in Python path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 import requests
 import config
 
