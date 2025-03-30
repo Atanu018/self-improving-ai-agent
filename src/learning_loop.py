@@ -22,36 +22,59 @@ class LearningLoop:
         self.knowledge_cache = {}  
         self.failed_queries = set()  
         self.batch_feedback_updates = {}  
-        self.past_gaps = self.load_past_gaps()  # ✅ Load past gaps once at startup
 
     def generate_new_query(self):
         """Generate a query based on past failures and knowledge gaps."""
         if self.failed_queries:
             query = self.failed_queries.pop()  
-            logging.info(f"🛑 Retrying Failed Query: {query}")
             return query  
 
-        if self.past_gaps:
-            query = max(self.past_gaps, key=self.past_gaps.get)
-            logging.info(f"🔄 Using past gap query: {query}")
-            return query  
+        past_gaps = self.load_past_gaps()
+        if past_gaps:
+            return max(past_gaps, key=past_gaps.get)  
 
-        query = "What are the latest advancements in AI?"  
-        logging.info(f"📌 Default Query Used: {query}")
-        return query  
+        logging.info("📌 Default Query Used: What are the latest advancements in AI?")
+        return "What are the latest advancements in AI?"
 
     def extract_expected_keywords(self, query):
-        """Retrieve knowledge and extract keywords dynamically."""
-        retrieved_info = self.knowledge_retriever.retrieve_knowledge(query)
-        return self.extract_keywords_from_text(retrieved_info)
+        """
+        Extracts key topics from the query.
+        """
+        retrieved_info = self.knowledge_retriever.search_wikipedia(query)  # Get summary from Wikipedia
+    
+        if not retrieved_info or retrieved_info == "No Wikipedia results found.":
+            logging.warning(f"⚠️ No useful Wikipedia data for: {query}")
+            return ["Artificial Intelligence", "Machine Learning", "Deep Learning", "AI Trends"]  # Use fallback keywords
+    
+        extracted_keywords = self.extract_keywords_from_text(retrieved_info)
+    
+        if not extracted_keywords:
+            logging.warning("⚠️ No keywords extracted. Using default AI-related topics.")
+            return ["Artificial Intelligence", "Machine Learning", "Deep Learning", "AI Trends"]
+    
+        return extracted_keywords
+    
 
     def extract_keywords_from_text(self, text):
-        """Extract keywords from text using KeyBERT."""
-        keywords = self.kw_model.extract_keywords(text, keyphrase_ngram_range=(1, 2), stop_words='english')
-        return [kw[0] for kw in keywords[:5]]  
+        """
+        Extracts keywords from the given text using KeyBERT.
+        Handles cases where text is empty or invalid.
+        """
+        if not isinstance(text, str) or not text.strip():
+            logging.warning("⚠️ Empty or invalid text received for keyword extraction.")
+            return []  # Return an empty list to prevent errors
+
+        try:
+            keywords = self.kw_model.extract_keywords(text, keyphrase_ngram_range=(1, 2), stop_words='english')
+            return [kw[0] for kw in keywords]  # Extract just the keywords
+        except Exception as e:
+            logging.error(f"❌ Error extracting keywords: {e}")
+            return []  # Return an empty list on failure
+  
 
     def refine_query(self, query):
         """Modify the query dynamically if initial retrieval is weak."""
+        logging.info(f"🔄 Refining Query: {query}")
         refined_queries = [
             f"Comprehensive guide on {query}",
             f"Detailed explanation of {query}",
@@ -66,7 +89,9 @@ class LearningLoop:
             logging.info(f"⚡ Using cached knowledge for: {query}")
             return self.knowledge_cache[query]
 
+        logging.info(f"📌 Searching for: {query}")  
         retrieved_info = self.knowledge_retriever.retrieve_knowledge(query)
+
         retrieved_keywords = self.extract_keywords_from_text(retrieved_info)
 
         missing_keywords = [kw for kw in expected_keywords if kw not in retrieved_keywords]
@@ -162,4 +187,4 @@ class LearningLoop:
                 return {gap: gaps.count(gap) for gap in gaps}  
         except FileNotFoundError:
             logging.warning("⚠️ past_gaps.txt not found. Starting fresh.")
-            return {}  # ✅ Now it won’t cause issues
+            return {}
