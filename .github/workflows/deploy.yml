@@ -1,0 +1,29 @@
+name: Deploy Backend
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+
+      - name: Set Up Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: "3.9"
+
+      - name: Install Dependencies
+        run: pip install -r backend/requirements.txt
+
+      - name: Run Tests
+        run: pytest tests/
+
+      - name: Deploy
+        run: |
+          docker build -t ai-agent .
+          docker run -d -p 5000:5000 ai-agent
