@@ -1,8 +1,10 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS  
 from adaptive_learning import google_search, wikipedia_search
 import config
 
 app = Flask(__name__)
+CORS(app)  
 
 @app.route("/search", methods=["POST"])
 def search():
@@ -17,8 +19,12 @@ def search():
     google_results = google_search(query)
     wikipedia_results = wikipedia_search(query)
 
-    # Combine and return results
-    combined_results = {"google_results": google_results, "wikipedia_results": wikipedia_results}
+    # Ensure both results are lists
+    google_results = google_results if isinstance(google_results, list) else []
+    wikipedia_results = wikipedia_results if isinstance(wikipedia_results, list) else []
+
+    # Combine results into a single list
+    combined_results = google_results + wikipedia_results  
 
     return jsonify({"query": query, "results": combined_results})
 
